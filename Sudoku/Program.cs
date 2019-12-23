@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Sudoku {
     class Program {
-        const string game = 
+        const string game =
             @"003020600
             900305001
             001806400
@@ -24,7 +24,11 @@ namespace Sudoku {
             public void SetFixed(int n) => number = Enumerable.Range(0, 9).Select((x, i) => i == n-1).ToArray();
             public bool IsFixed => Number.Count(t => t == true) == 1;
             public int AsNumber => IsFixed ? Number.TakeWhile(i => !i).Count()+1 : 0;
-            public Field(int n) {
+            public int X { get; }
+            public int Y { get; }
+            public Field(int x, int y, int n) {
+                X = x;
+                Y = y;
                 if (n > 0) SetFixed(n);
             }
         }
@@ -32,13 +36,11 @@ namespace Sudoku {
         static void Main(string[] args) {
             var field = new Field[9, 9];
 
-            var z = new Field(0).AsNumber;
-
             var lines = game.Split('\n');
 
             for (int i = 0; i < lines.Length; i++) {
                 for (int j = 0; j < 9; j++) {
-                    field[j, i] = new Field(lines[i].Trim()[j] - '0');
+                    field[j, i] = new Field(j, i, lines[i].Trim()[j] - '0');
                 }
             }
 
@@ -47,10 +49,10 @@ namespace Sudoku {
             IEnumerable<Field> LineV(int x) => Enumerable.Range(0, 9).Select(i => field[x, i]);
             IEnumerable<Field> LineH(int y) => Enumerable.Range(0, 9).Select(i => field[i, y]);
 
-            IEnumerable<(int x, int y, Field f)> AllFields() {
+            IEnumerable<Field> AllFields() {
                 for (int y = 0; y < 9; y++) {
                     for (int x = 0; x < 9; x++) {
-                        yield return (x, y, field[x, y]);
+                        yield return field[x, y];
                     }
                 }
             }
@@ -65,24 +67,24 @@ namespace Sudoku {
                 }
             }
 
-            IEnumerable<Field> AvailableFields(int x, int y) =>
-                LineH(y).Concat(LineV(x)).Concat(QuadrantFromPos(x, y));
+            IEnumerable<Field> AvailableFields(Field f) =>
+                LineH(f.Y).Concat(LineV(f.X)).Concat(QuadrantFromPos(f.X, f.Y)).Except(new[] { f });
 
             bool changed;
             do {
                 changed = false;
-                foreach (var (x, y, f) in AllFields().Where(k => Unsure(k.f))) {
-                    foreach (var sureField in AvailableFields(x, y).Where(Sure)) {
+                foreach (var f in AllFields().Where(Unsure)) {
+                    foreach (var sureField in AvailableFields(f).Where(Sure)) {
                         f.Unset(sureField.AsNumber);
                     }
-                    if (f.IsFixed) changed = true;
+                    changed |= f.IsFixed;
                 }
             } while (changed);
 
             foreach (var f in AllFields()) {
-                Console.Write(f.f.AsNumber);
+                Console.Write(f.AsNumber);
                 Console.Write("\t");
-                if (f.x == 8) Console.WriteLine();
+                if (f.X == 8) Console.WriteLine();
             }
         }
     }
