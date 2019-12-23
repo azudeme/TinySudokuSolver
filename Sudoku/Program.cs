@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TinySudokuSolver {
     class Program {
@@ -18,66 +16,65 @@ namespace TinySudokuSolver {
             005010300";
 
         class Field {
-            private bool[] number = new bool[9] { true, true, true, true, true, true, true, true, true };
-            public IReadOnlyList<bool> Number { get => number; }
+            private bool[] number = Enumerable.Repeat(true, 9).ToArray();
             public void Unset(int n) => number[n - 1] = false;
-            public void SetFixed(int n) => number = Enumerable.Range(0, 9).Select((x, i) => i == n-1).ToArray();
-            public bool IsFixed => Number.Count(t => t == true) == 1;
-            public int AsNumber => IsFixed ? Number.TakeWhile(i => !i).Count()+1 : 0;
-            public int X { get; }
-            public int Y { get; }
-            public Field(int x, int y, int n) {
-                X = x;
-                Y = y;
-                if (n > 0) SetFixed(n);
+            public bool IsFixed => number.Count(t => t == true) == 1;
+            public int AsNumber => IsFixed ? number.TakeWhile(i => !i).Count()+1 : 0;
+            public int X { get; set; }
+            public int Y { get; set; }
+            public Field(int n) {
+                if (n > 0) number = Enumerable.Range(0, 9).Select((_, i) => i == n - 1).ToArray();
             }
         }
 
-        static void Main(string[] args) {
-            var field = new Field[9, 9];
-
+        static void ParseField(string game, Field[,] field) {
             var lines = game.Split('\n');
 
             for (int i = 0; i < lines.Length; i++) {
                 for (int j = 0; j < 9; j++) {
-                    field[j, i] = new Field(j, i, lines[i].Trim()[j] - '0');
+                    field[j, i] = new Field(lines[i].Trim()[j] - '0') { X = j, Y = i };
                 }
             }
+        }
 
+        static void Main(string[] args) {
+            var gameField = new Field[9, 9];
+            ParseField(game, gameField);
+            
             bool Unsure(Field f) => !f.IsFixed;
             bool Sure(Field f) => f.IsFixed;
-            IEnumerable<Field> LineV(int x) => Enumerable.Range(0, 9).Select(i => field[x, i]);
-            IEnumerable<Field> LineH(int y) => Enumerable.Range(0, 9).Select(i => field[i, y]);
+            IEnumerable<Field> LineV(Field f) => Enumerable.Range(0, 9).Select(i => gameField[f.X, i]);
+            IEnumerable<Field> LineH(Field f) => Enumerable.Range(0, 9).Select(i => gameField[i, f.Y]);
 
             IEnumerable<Field> AllFields() {
                 for (int y = 0; y < 9; y++) {
                     for (int x = 0; x < 9; x++) {
-                        yield return field[x, y];
+                        yield return gameField[x, y];
                     }
                 }
             }
 
-            IEnumerable<Field> QuadrantFromPos(int x, int y) {
-                x -= x % 3;
-                y -= y % 3;
+            IEnumerable<Field> BlockFromPos(Field f) {
+                int x = f.X - f.X % 3;
+                int y = f.Y - f.Y % 3;
                 for (int i = x; i < x + 3; i++) {
                     for (int j = y; j < y + 3; j++) {
-                        yield return field[i, j];
+                        yield return gameField[i, j];
                     }
                 }
             }
 
-            IEnumerable<Field> AvailableFields(Field f) =>
-                LineH(f.Y).Concat(LineV(f.X)).Concat(QuadrantFromPos(f.X, f.Y)).Except(new[] { f });
+            IEnumerable<Field> AvailableFieldsFor(Field f) =>
+                LineH(f).Concat(LineV(f)).Concat(BlockFromPos(f)).Except(f);
 
             bool changed;
             do {
                 changed = false;
-                foreach (var f in AllFields().Where(Unsure)) {
-                    foreach (var sureField in AvailableFields(f).Where(Sure)) {
-                        f.Unset(sureField.AsNumber);
+                foreach (var unsureField in AllFields().Where(Unsure)) {
+                    foreach (var solvedField in AvailableFieldsFor(unsureField).Where(Sure)) {
+                        unsureField.Unset(solvedField.AsNumber);
                     }
-                    changed |= f.IsFixed;
+                    changed |= unsureField.IsFixed;
                 }
             } while (changed);
 
@@ -87,5 +84,9 @@ namespace TinySudokuSolver {
                 if (f.X == 8) Console.WriteLine();
             }
         }
+    }
+
+    static class Extensions {
+        public static IEnumerable<T> Except<T>(this IEnumerable<T> ts, T elem) => ts.Except(new[] { elem });
     }
 }
