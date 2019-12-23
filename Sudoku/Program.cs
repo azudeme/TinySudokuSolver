@@ -30,7 +30,14 @@ namespace TinySudokuSolver {
             }
         }
 
-        static void ParseField(string game, Field[,] field) {
+        static void Main(string[] args) {
+            var gameField = new Field[9, 9];
+            ParseGameField(game, gameField);
+            SolveGameFiled(gameField);
+            PrintGameField(gameField);
+        }
+
+        static void ParseGameField(string game, Field[,] field) {
             var lines = game.Split('\n');
 
             for (int i = 0; i < lines.Length; i++) {
@@ -40,10 +47,7 @@ namespace TinySudokuSolver {
             }
         }
 
-        static void Main(string[] args) {
-            var gameField = new Field[9, 9];
-            ParseField(game, gameField);
-            
+        static void SolveGameFiled(Field[,] gameField) {
             bool Unsure(Field f) => !f.IsFixed;
             bool Sure(Field f) => f.IsFixed;
             IEnumerable<Field> LineV(Field f) => Enumerable.Range(0, 9).Select(i => gameField[f.X, i]);
@@ -80,11 +84,14 @@ namespace TinySudokuSolver {
                     changed |= unsureField.IsFixed;
                 }
             } while (changed);
+        }
 
-            foreach (var f in AllFields()) {
-                Console.Write(f.AsNumber);
-                Console.Write("\t");
-                if (f.X == 8) Console.WriteLine();
+        static void PrintGameField(Field[,] gameField) {
+            for (int y = 0; y < 9; y++) {
+                for (int x = 0; x < 9; x++) {
+                    Console.Write($"{gameField[x,y].AsNumber}\t");
+                }
+                Console.WriteLine();
             }
         }
     }
