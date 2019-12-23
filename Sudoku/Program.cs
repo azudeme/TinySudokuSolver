@@ -17,11 +17,14 @@ namespace TinySudokuSolver {
 
         class Field {
             private bool[] number = Enumerable.Repeat(true, 9).ToArray();
-            public void Unset(int n) => number[n - 1] = false;
-            public bool IsFixed => number.Count(t => t == true) == 1;
-            public int AsNumber => IsFixed ? number.TakeWhile(i => !i).Count()+1 : 0;
+
+            public void Unset(int n)    => number[n - 1] = false;
+            public bool IsFixed         => number.Count(t => t == true) == 1;
+            public int AsNumber         => IsFixed ? number.TakeWhile(i => !i).Count()+1 : 0;
+
             public int X { get; set; }
             public int Y { get; set; }
+
             public Field(int n) {
                 if (n > 0) number = Enumerable.Range(0, 9).Select((_, i) => i == n - 1).ToArray();
             }
